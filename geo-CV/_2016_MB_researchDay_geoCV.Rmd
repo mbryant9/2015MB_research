@@ -1,18 +1,20 @@
-# goal, for the study: gene robustness is an important factor to explain aging or lifespan. 
-# method:  why CV for gene expression
-# CV = std/mean, a measurement of robustness, nosie to signal ratio.
-# data science
-# histograms 
-# how many genes in yeast genomes
-# what is microarray
-# conslusions: CV are generally small, because yeast cells has a very small genome. 
-# most of its genes are relatively indispensible for its homestatisis. 
-# In comparison to human cells, how many genes, how many proteins. 
+---
+title: "MB_2016ResearchDay"
+author: "MB, HQ"
+date: "March 24, 2016"
+output: html_document
+---
 
-# do backgroud reading on gene-expression fluctuation
+Useful references:
+CV https://www.youtube.com/watch?v=lAE3Xll9yoE
 
-#2012 Nov 2
+Qin tutorial:  https://www.youtube.com/watch?v=gC-WuK4BbJY
 
+DNA microarray: https://www.youtube.com/watch?v=VNsThMNjKhM
+
+The R markdown file for MB 2016 Resaerc Day. 
+
+```{r}
 rm(list=ls())
 require(GEOquery)
 
@@ -21,9 +23,22 @@ require(GEOquery)
 
 myfiles = read.table("geo_GPL2529.tab", head=F, sep="\t")
 myGSEs = as.character( myfiles[,1] )
+myGSEs 
+```
 
-#11:07->
-for ( myGSE in myGSEs ) { 
+GSE37466
+http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE37466
+
+GSE27085
+http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE27085
+
+GSE30053
+http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE30053
+
+```{r}
+myGSE = "GSE37466"
+myGSE= "GSE27085"
+myGSE= "GSE30053"
 
   outfilename = paste( "output/", myGSE, "_log2CV.csv", sep='')
   
@@ -32,14 +47,10 @@ if (length(gset) > 1) idx <- grep("GPL90", attr(gset, "names")) else idx <- 1
 gset <- gset[[idx]]
 
 ex <- exprs(gset) #This is the expression matrix
+```
 
-sampleSizeFlag = 'largeSize'
-if( length(ex[1,]) <= 5) { sampleSizeFlag='SmallSize'}
-
-if( sampleSizeFlag == 'largeSize') {
-
-#########
-# Find out probes and ORFs
+Now, preprocessing
+```{r}
 dictionary = gset@featureData@data[, c('ID', 'ORF')]  #This is a lookup table for probe ID and ORF 
 
 ORFs = unique(as.character(dictionary$ORF))
@@ -87,16 +98,14 @@ for( col in 1:length(ex3[1,])) {
 }
 apply(ex3norm, 2, sum) / max(colSums)
 ex3 = ex3norm 
+```
 
-#########
-# now, have a look at the signals
+now, have a look at the signals
+```{r}
 hist(ex3[,1], br=100)
 ex4 = log2(ex3)
 hist(ex4[,3])
 ex4[ex4<0] = NA #remove backgrounds
-
-#############
-#calculate coefficient of variation
 myVar = apply( ex4, 1, FUN=function(x){var(x, na.rm=T)})
 myStddev = sqrt(myVar)
 myMean = apply( ex4, 1, FUN=function(x){mean(x, na.rm=T)})
@@ -105,19 +114,6 @@ myarray= data.frame(cbind( myStddev, myMean, myCV))
 myarray$ORF = ORFs
 myarray = myarray[, c(4, 1:3)]
 summary(myarray)
-
-write.csv(myarray, outfilename, row.names=F)
-test = read.csv( outfilename, colClasses = c('character', NA, NA, NA))
-str(test)
-hist(test$myCV, br=100)
-hist(test$myStddev, br=100)
-hist(test$myMean, br=100)
-
-} else { # sampleSizeFlag == 'SmallSize', write an error file
-  outfilename = paste( "output/", myGSE, "_log2CV.csv.", sampleSizeFlag, sep='')
-  write.csv(x=rnorm(5), outfilename, row.names=F)  
-}  # sampleSizeFlag
-
-} #end of myGSEs loop
-
+hist(myarray$myCV, main=myGSE, xlab="CV", br=60)
+```
 
